@@ -1,7 +1,4 @@
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.TreeSet;
+import java.util.*;
 
 
 /**
@@ -9,7 +6,6 @@ import java.util.TreeSet;
  * предикативной системы со словарем.
  *
  * @author Pavel Manakhov (manakhovpavel@gmail.com)
- *
  */
 public class DictionaryPredictiveSystem extends Dictionary
 		implements PredictiveTextSystem {
@@ -25,15 +21,25 @@ public class DictionaryPredictiveSystem extends Dictionary
 			return new PSNode(character, depth);
 		}
 
-		public TreeSet<String> getWordwormsByPattern(TreeSet<String> wordforms,
-				String prefix, List<String> pattern) {
+		public TreeMap<Long, List<String>> getWordwormsByPattern(TreeMap<Long, List<String>> wordforms,
+																 String prefix, List<String> pattern, int maxFrequency) {
 
 			// Если шаблон поиска пуст...
 			if (pattern.isEmpty())
 				return wordforms; // ...вернуть список как он есть
 
 			// Получаем группу символов, соответсвующую номеру буквы в слове
-			final String chracterGroup = pattern.get(depth);
+			String chracterGroup = "";
+			//Если еще 'нажимаем' клавишу
+			if (depth < pattern.size()) {
+				chracterGroup = pattern.get(depth);
+			}
+			//Или берем всех детей текущей буквы и идем по ним
+			else {
+				for (Map.Entry<Character, Node> childNode : children.entrySet()) {
+					chracterGroup += childNode.getKey();
+				}
+			}
 
 			// Движемся по всем символам в группе
 			for (int index = 0; index < chracterGroup.length(); index++) {
@@ -43,13 +49,17 @@ public class DictionaryPredictiveSystem extends Dictionary
 
 				// Если такая буква есть в текущей ветви...
 				if (childNode != null) {
-					if (depth == pattern.size() - 1) { // ...и мы достигли конца слова
-						// Добавляем слово в результирующий набор
-						if (childNode.frequency > 0)
-							wordforms.add(prefix + childNode.character);
-					} else { // иначе - двигаемся дальше по шаблону
+					//Если глубина больше количества клавиш и частота ребенка больше максимальной найденной
+					if (depth >= pattern.size()) {
+						wordforms.computeIfAbsent(childNode.frequency, k -> new ArrayList<>());
+						wordforms.get(childNode.frequency).add(prefix + childNode.character);
+						maxFrequency = (int) childNode.frequency;
+					}
+					// иначе - двигаемся дальше по шаблону
+					//Если у ребенка есть дети, иначе не пойдем
+					if (childNode.children.size() != 0) {
 						((PSNode) childNode).getWordwormsByPattern(
-								wordforms, prefix + childNode.character, pattern);
+								wordforms, prefix + childNode.character, pattern, maxFrequency);
 					}
 				}
 			}
@@ -62,7 +72,8 @@ public class DictionaryPredictiveSystem extends Dictionary
 	/**
 	 * Создает модель предикативной системы с пустым словарем.
 	 */
-	DictionaryPredictiveSystem() { }
+	DictionaryPredictiveSystem() {
+	}
 
 	public static DictionaryPredictiveSystem newInstance() {
 		return new DictionaryPredictiveSystem();
@@ -83,9 +94,9 @@ public class DictionaryPredictiveSystem extends Dictionary
 	 * будут упорядочены по алфавиту.
 	 *
 	 * @param regex шаблон поиска на основе регулярных выражений
-	 *                вида <code>[мно][абвг]</code>.
+	 *              вида <code>[мно][абвг]</code>.
 	 * @return список словоформ по убыванию вероятности ввода. Если
-	 *         шаблон поиска пуст, то метод вернет пустой immutable список.
+	 * шаблон поиска пуст, то метод вернет пустой immutable список.
 	 */
 	@Override
 	public List<String> getWordsByPattern(String regex) {
@@ -95,12 +106,25 @@ public class DictionaryPredictiveSystem extends Dictionary
 		/* Создаем набор, элементы которого будут упорядочены по
 		 * частоте употреблений и наполняем его
 		 */
-		TreeSet<String> wordformSet = rootNode().getWordwormsByPattern(
-				new TreeSet<String>(new OrderByFrequency(this)),
+		TreeMap<Long, List<String>> wordformSet = rootNode().getWordwormsByPattern(
+				new TreeMap<Long, List<String>>(),
 				emptyPrefix,
-				pattern);
+				pattern, 0);
+		List<String> firstThree = new ArrayList<>();
 
-		return Arrays.asList(wordformSet.toArray(new String[0]));
+		ArrayList<Long> keys = new ArrayList<Long>(wordformSet.keySet());
+
+		for (int i = keys.size() - 1; i > -1 && firstThree.size() < 3; i--) {
+			try {
+				for (int l = 0; l < wordformSet.get(keys.get(i)).size() && firstThree.size() < 3; l++) {
+					firstThree.add(wordformSet.get(keys.get(i)).get(l));
+				}
+			}
+			catch (Exception e){
+				System.out.println(e.getMessage());
+			}
+		}
+		return firstThree;
 	}
 
 	/**

@@ -7,7 +7,7 @@ import java.nio.charset.Charset;
 public class Main {
     public static void main(String[] args) throws Exception {
 
-        InputStream is = new FileInputStream("src/main/resources/dictionary.xml");
+        InputStream is = new FileInputStream("src/main/resources/dict.opcorpora.xml");
 
         XMLDictionaryPersister persister = new XMLDictionaryPersister().newInstance(is, Charset.forName("UTF-8"));
         System.out.println("XML deserialized!");
