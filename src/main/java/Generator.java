@@ -90,6 +90,10 @@ class Generator {
                 //Order of buttons to type a word
                 System.out.println("\n" + mainWord + ":\n");
                 String buttonsOrder = "";
+                int kspcForWord = 0;
+                if(mainWord.equals("абдурохмоновну")){
+                    int fuck = 9;
+                }
                 //For all letters in this word
                 for (int chr = 0; chr < mainWord.length(); chr++) {
                     //For all buttons
@@ -119,14 +123,16 @@ class Generator {
                             List<String> lst = predictiveSystem.getWordsByPattern(buttonsOrder);
                             //Button was "pressed"
                             kspc += 1;
+                            kspcForWord += 1;
                             //Space button taps
                             int localCounter = 0;
                             for (String word : lst) {
                                 ++localCounter;
-                                System.out.println(word);
                                 if (word.equals(mainWord)) {
                                     //Add space taps
                                     kspc += localCounter;
+                                    kspcForWord += localCounter;
+                                    System.out.println(String.format("Количество букв: %s\nКоличество нажатий: %s", word.length(), kspcForWord));
                                     //To break cycle of mainWord chars
                                     chr = mainWord.length();
                                     //Break local cycle
@@ -137,8 +143,8 @@ class Generator {
                         }
                     }
                 }
-                if(++counter % 10000 == 0){
-                System.out.println(String.format("%s of %s words were checked!", counter, allWords.size()));
+                if(++counter % 500 == 0){
+                    System.out.println(String.format("%s of %s words were checked!", counter, allWords.size()));
                 }
             }
             System.out.println(String.format("Layout #%s checked!\nKSPC = %s\n", k, kspc));
