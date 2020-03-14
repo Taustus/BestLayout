@@ -28,6 +28,6 @@ public interface DictionaryPersister extends Iterable<String> {
 	 * @return частота указанной словоформы. Должен вернет 0,
 	 *         если такой словоформы нет в словаре.
 	 */
-	public long getFrequency(String wordform);
+	public int getFrequency(String wordform);
 	
 }

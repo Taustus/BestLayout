@@ -57,7 +57,7 @@ public class BinaryDictionaryPersister implements DictionaryPersister, Serializa
 	 * @throws NullPointerException если <code>wordform</code> равен <tt>null</tt>.
 	 */
 	@Override
-	public long getFrequency(String wordform) {
+	public int getFrequency(String wordform) {
 		if (wordform == null)
 			throw new NullPointerException();
 		

@@ -93,7 +93,7 @@ class Generator {
                 continue;
             }
             //Main criterion of choosing best layout
-            double kspc = 0;
+            double kspc, denominator = 0, numerator = 0;
             //Foreach word
             for (String mainWord : allWords) {
                 //Order of buttons to type a word
@@ -147,8 +147,10 @@ class Generator {
                     }
                 }
                 int frequency = (int) predictiveSystem.getFrequency(mainWord);
-                kspc += (frequency * kspcForWord) / (mainWord.length() * frequency);
+                numerator += (frequency * kspcForWord);
+                denominator += (mainWord.length() * frequency);
             }
+            kspc = numerator / denominator;
             System.out.println(String.format("\nLayout #%s checked!\nKSPC = %s\n", k, kspc));
             if (kspc < bestValue && k != bestIndex) {
                 bestValue = kspc;

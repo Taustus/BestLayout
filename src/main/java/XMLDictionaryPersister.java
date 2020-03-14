@@ -17,7 +17,7 @@ public class XMLDictionaryPersister implements DictionaryPersister {
     private List<Word> wordsList;
 
     @ElementMap(name = "default_view", key = "wordform", value = "frequency", required = false)
-    private Map<String, Integer> words;
+    private HashMap<String, Integer> words;
 
     /**
      * Создает пустой загрузчик словаря.
@@ -37,18 +37,18 @@ public class XMLDictionaryPersister implements DictionaryPersister {
     }
 
     public static XMLDictionaryPersister newInstance(InputStream stream,
-                                                     Charset encoding) throws Exception {
+                                                     Charset encoding, int wordsCount) throws Exception {
         if (stream == null || encoding == null)
             throw new NullPointerException();
 
         final Serializer serializer = new Persister();
         XMLDictionaryPersister toReturn = serializer.read(XMLDictionaryPersister.class, new InputStreamReader(
                 stream, encoding));
-        toReturn.CreateMap();
+        toReturn.CreateMap(wordsCount);
         return toReturn;
     }
 
-    public void CreateMap() throws Exception {
+    private void CreateMap(int wordsCount) throws Exception {
         if (words.size() == 0) {
             //All wordForms from words to one list
             List<String> lst = new ArrayList<>();
@@ -57,23 +57,22 @@ public class XMLDictionaryPersister implements DictionaryPersister {
                     lst.add(anotherWord.form);
                 }
             }
+            Random rnd = new Random();
             //Calculate amount of each word and add to map
-            int counter = lst.size();
-            for (String temp : lst) {
-                if(lst.size() - counter < 1500000) {
-                    words.put(temp, Collections.frequency(lst, temp));
-                    System.out.println(String.format("\nWords left:\t%s\nHashmap size:\t%s", --counter, words.size()));
-                }
-                else{
-                    break;
-                }
+            for (int i = 0; i < wordsCount; i++) {
+                int index = rnd.nextInt(lst.size() - 1);
+                words.put(lst.get(index), Collections.frequency(lst, lst.get(index)));
+                lst.remove(index);
+                System.out.println(String.format("\nWords left:\t%s\nHashmap size:\t%s", wordsCount - (i + 1), words.size()));
             }
-            wordsList.removeAll(wordsList);
-            OutputStream os = new FileOutputStream("src/main/resources/dictionary.xml");
 
+            wordsList.removeAll(wordsList);
+            OutputStream os = new FileOutputStream("src/main/resources/small_dictionary.xml");
             write(os, Charset.forName("UTF-8"));
         }
     }
+
+
 
     /**
      * @throws NullPointerException     если <code>wordform</code> равен <tt>null</tt>.
@@ -101,7 +100,7 @@ public class XMLDictionaryPersister implements DictionaryPersister {
      * @throws NullPointerException если <code>wordform</code> равен <tt>null</tt>.
      */
     @Override
-    public long getFrequency(String wordform) {
+    public int getFrequency(String wordform) {
         if (wordform == null)
             throw new NullPointerException();
 
