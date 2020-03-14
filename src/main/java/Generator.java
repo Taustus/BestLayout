@@ -1,7 +1,14 @@
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
+import java.util.*;
+
+/**
+ * Класс <code>Generator</code> представляет собой генератор раскладок
+ * и алгоритм для поиска лучшей раскладки среди них
+ *
+ * @author Sergey Babikov (staustus@gmail.com)
+ */
 class Generator {
 
     private Random rnd;
@@ -77,23 +84,22 @@ class Generator {
         }
     }
 
-    private Character[][] findLocalOptium(Character[][][] set) {
-        int bestValue = Integer.MAX_VALUE;
+    public Pair<Double, Integer> findLocalOptium(Character[][][] set, int lastBest, double best, boolean initial) {
+        double bestValue = best;
+        int bestIndex = -1;
         //For all layouts
-        for (int k = 0; k < set.length; k++) {
+        for (int k = lastBest + 1; k < set.length; k++) {
+            if(set[k] == null){
+                continue;
+            }
             //Main criterion of choosing best layout
-            long kspc = 0;
-            //For output
-            int counter = 0;
+            double kspc = 0;
             //Foreach word
             for (String mainWord : allWords) {
                 //Order of buttons to type a word
-                System.out.println("\n" + mainWord + ":\n");
+                //System.out.println("\n" + mainWord + ":\n");
                 String buttonsOrder = "";
-                int kspcForWord = 0;
-                if(mainWord.equals("абдурохмоновну")){
-                    int fuck = 9;
-                }
+                double kspcForWord = 0;
                 //For all letters in this word
                 for (int chr = 0; chr < mainWord.length(); chr++) {
                     //For all buttons
@@ -110,8 +116,7 @@ class Generator {
                                 if (set[k][i][let].equals(mainWord.charAt(chr))) {
                                     goodButton = true;
                                 }
-                            }
-                            else {
+                            } else {
                                 break;
                             }
                         }
@@ -122,7 +127,6 @@ class Generator {
                             //Take words that were predicted
                             List<String> lst = predictiveSystem.getWordsByPattern(buttonsOrder);
                             //Button was "pressed"
-                            kspc += 1;
                             kspcForWord += 1;
                             //Space button taps
                             int localCounter = 0;
@@ -130,9 +134,8 @@ class Generator {
                                 ++localCounter;
                                 if (word.equals(mainWord)) {
                                     //Add space taps
-                                    kspc += localCounter;
                                     kspcForWord += localCounter;
-                                    System.out.println(String.format("Количество букв: %s\nКоличество нажатий: %s", word.length(), kspcForWord));
+                                    //System.out.println(String.format("Количество букв: %s\nКоличество нажатий: %s", word.length(), kspcForWord));
                                     //To break cycle of mainWord chars
                                     chr = mainWord.length();
                                     //Break local cycle
@@ -143,54 +146,180 @@ class Generator {
                         }
                     }
                 }
-                if(++counter % 500 == 0){
-                    System.out.println(String.format("%s of %s words were checked!", counter, allWords.size()));
+                int frequency = (int) predictiveSystem.getFrequency(mainWord);
+                kspc += (frequency * kspcForWord) / (mainWord.length() * frequency);
+            }
+            System.out.println(String.format("\nLayout #%s checked!\nKSPC = %s\n", k, kspc));
+            if (kspc < bestValue && k != bestIndex) {
+                bestValue = kspc;
+                bestIndex = k;
+                if (!initial) {
+                    break;
                 }
             }
-            System.out.println(String.format("Layout #%s checked!\nKSPC = %s\n", k, kspc));
         }
-        return new Character[8][];
+        //If we didn't find optimum return null
+        return (bestIndex != -1 ? new ImmutablePair<>(bestValue, bestIndex) : null);
     }
 
-    private void setNewSet(Character[][] optimum) {
+    private Character[][][] setNewSet(Character[][] optimum) {
         Character[][][] newSet = new Character[n][][];
-        Character[][] template = findLocalOptium(set);
+        Random rnd = new Random();
         //For every layout
         for (int k = 0; k < n; k++) {
-            //For every button
-            for (int i = 0; i < 8; i++) {
-                for (int swap = 0; swap < 7; swap++) {
-                    Character temp = set[k][i][swap];
-                    set[k][i][swap] = set[k][i][swap + 1];
-                    set[k][i][swap + 1] = temp;
+            //Reference type.......
+            Character[][] temp = cloneLayout(optimum);
+
+            int firstBtn = rnd.nextInt(8);
+            int secondBtn = rnd.nextInt(8);
+            int firstLength = calculateLength(temp, firstBtn);
+            int secondLength = calculateLength(temp, secondBtn);
+
+            if (firstLength > 3) {
+                if (secondLength < 7) {
+                    temp[secondBtn][secondLength] = temp[firstBtn][firstLength - 1];
+                    temp[firstBtn][firstLength - 1] = null;
+                    newSet[k] = temp.clone();
+                }
+                else {
+                    k--;
+                }
+            } else {
+                if (secondLength > 3) {
+                    temp[firstBtn][firstLength] = temp[secondBtn][secondLength - 1];
+                    temp[secondBtn][secondLength - 1] = null;
+                    newSet[k] = temp.clone();
+                } else {
+                    k--;
                 }
             }
         }
+        return newSet.clone();
     }
 
-    Character[][] findBestLayout() {
-        Character[][] localOptimum = findLocalOptium(set);
-        for (int i = 0; i < depth; i++) {
-            //setNewSet();
+    private int calculateLength(Character[][] optimum, int btnIndex) {
+        int length = optimum[0].length;
+        for (int i = 0; i < optimum[btnIndex].length; i++) {
+            if (optimum[btnIndex][i] == null) {
+                length = i;
+                break;
+            }
         }
-        return new Character[8][];
+        return length;
     }
 
-    void layoutsToString(int n){
-        for (int i = 0; i < n && i < set.length; i++){
+    Pair<Double, Character[][]> solution_lowest;
+
+    Pair<Double, Character[][]> recursion(Character[][][][] storage, Pair<Double, Integer> kspc_index,
+                                               Pair<Double, Character[][]> solution, List<Integer> depth_layoutIndex,
+                                               int depth) {
+        try {
+            //If initial == false then take first layout which KSPC less than lowest
+            boolean initial = depth == 0;
+            //If depth == 0 we don't want to change main set
+            storage[depth] = depth > 0 ? setNewSet(cloneLayout(storage[depth - 1][kspc_index.getRight()])) : cloneSet(set);
+            System.out.println("\nDepth: " + depth + "\n");
+            //If depth == 0, then solution'll be equals null
+            //To avoid NullReferenceException we should use this ternary operator
+            solution = solution != null ? solution : new ImmutablePair<>(Double.MAX_VALUE, null);
+            //If we don't have info about this depth we should start from the first index
+            int lastBest = depth_layoutIndex.size() > depth ? depth_layoutIndex.get(depth) : -1;
+            //Find best layout and it's KSPC
+            kspc_index = findLocalOptium(storage[depth], lastBest, solution.getLeft(), initial);
+
+            if (kspc_index != null) {
+                System.out.println(String.format("Index of chosen layout: %s\nKSPC of chosen layout: %s", kspc_index.getRight(), kspc_index.getLeft()));
+                //Set new best KSPC
+                solution = new ImmutablePair<>(kspc_index.getLeft(), cloneLayout(storage[depth][kspc_index.getRight()]));
+                //If we were not so deep
+                if (depth_layoutIndex.size() - 1 < depth) {
+                    depth_layoutIndex.add(kspc_index.getRight());
+                }
+                //Else change index of current best layout
+                else {
+                    depth_layoutIndex.set(depth, kspc_index.getRight());
+                }
+                if(depth < this.depth - 1){
+                    solution = recursion(storage, kspc_index, solution, depth_layoutIndex, depth + 1);
+                }
+                if(lastBest < n && depth != 0){
+                    solution = recursion(storage, kspc_index, solution, depth_layoutIndex, depth);
+                }
+            }
+        }
+        catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+        if(depth == 0){
+                set[depth_layoutIndex.get(0)] = null;
+            if(depth_layoutIndex.get(0) != n - 1){
+                Pair<Double, Character[][]> temp = recursion(storage, kspc_index, null, depth_layoutIndex, depth);
+                solution = temp.getLeft() < solution.getLeft() ? temp : solution;
+                solution_lowest = solution_lowest == null || solution_lowest.getLeft() > solution.getLeft() ? solution : solution_lowest;
+            }
+        }
+        return solution;
+    }
+
+    Pair<Double, Character[][]> findBestLayout(){
+        Character[][][][] storage = new Character[depth][n][8][];
+        //storage[0] = cloneSet(set);
+        Pair<Double, Integer> kspc_index = null;//findLocalOptium(set, -1, Integer.MAX_VALUE, true);
+        Pair<Double, Character[][]> solution = null;//(kspc_index.getLeft(), cloneLayout(storage[0][kspc_index.getRight()]));
+        List<Integer> depth_layoutIndex = new ArrayList<>();
+        //depth_layoutIndex.add(kspc_index.getRight());
+        return recursion(storage, kspc_index, solution, depth_layoutIndex, 0);
+    }
+
+    private Character[][] cloneLayout(Character[][] set) {
+        Character[][] clonedLayout = new Character[set.length][];
+        for (int i = 0; i < set.length; i++) {
+            clonedLayout[i] = set[i].clone();
+        }
+        return clonedLayout;
+    }
+
+    private Character[][][] cloneSet(Character[][][] set) {
+        Character[][][] clonedSet = new Character[set.length][][];
+        for (int i = 0; i < set.length; i++) {
+            if(set[i] != null){
+                clonedSet[i] = cloneLayout(set[i]);
+            }
+        }
+        return clonedSet;
+    }
+
+    void layoutsToString(int n) {
+        for (int i = 0; i < n && i < set.length; i++) {
             System.out.println(String.format("Layout #%s:\n", i + 1));
-            for (int l = 0; l < set[i].length; l++){
+            for (int l = 0; l < set[i].length; l++) {
                 String button = String.format("Button %s:\t", l);
-                for (int chr = 0; chr < set[i][l].length; chr++){
-                    if(set[i][l][chr] != null){
+                for (int chr = 0; chr < set[i][l].length; chr++) {
+                    if (set[i][l][chr] != null) {
                         button += set[i][l][chr].toString() + " ";
-                    }
-                    else{
+                    } else {
                         break;
                     }
                 }
                 System.out.println(button);
             }
+            System.out.println();
+        }
+    }
+
+    void layoutsToString(Character[][] layout) {
+        System.out.println(String.format("Layout #%s:\n", 666));
+        for (int l = 0; l < layout.length; l++) {
+            String button = String.format("Button %s:\t", l);
+            for (int chr = 0; chr < layout[l].length; chr++) {
+                if (layout[l][chr] != null) {
+                    button += layout[l][chr].toString() + " ";
+                } else {
+                    break;
+                }
+            }
+            System.out.println(button);
+
             System.out.println();
         }
     }
