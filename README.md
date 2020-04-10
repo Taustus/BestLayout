@@ -12,5 +12,5 @@ Pseudocode of an algorithm:
 5. Repeat steps 3-5 until temporary_depth != depth
 6. Exclude previous best layout at index and repeat steps 3-6 until index != n-1
 ## How to stop an algorithm
-For current version there's no option for interrupting proram, except you run project in debug mode and set breakpoint at any place
+For current version there's no option for interrupting program, except you run project in debug mode and set breakpoint at any place
 in 'recursion' method, then take 'solution_lowest' field as your current best solution.
