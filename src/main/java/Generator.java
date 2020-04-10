@@ -125,7 +125,7 @@ class Generator {
                             //Add button letters
                             buttonsOrder += String.format("[%s]", buttonSet);
                             //Take words that were predicted
-                            List<String> lst = predictiveSystem.getWordsByPattern(buttonsOrder);
+                            List<String> lst = predictiveSystem.getWordsByPattern(buttonsOrder, 3);
                             //Button was "pressed"
                             kspcForWord += 1;
                             //Space button taps
@@ -218,6 +218,10 @@ class Generator {
         try {
             //If initial == false then take first layout which KSPC less than lowest
             boolean initial = depth == 0;
+            //We should remove previous best layout from main set
+            if(initial && kspc_index != null){
+                storage[depth][kspc_index.getRight()] = null;
+            }
             //If depth == 0 we don't want to change main set
             storage[depth] = depth > 0 ? setNewSet(cloneLayout(storage[depth - 1][kspc_index.getRight()])) : cloneSet(set);
             System.out.println("\nDepth: " + depth + "\n");
@@ -258,6 +262,8 @@ class Generator {
                 Pair<Double, Character[][]> temp = recursion(storage, kspc_index, null, depth_layoutIndex, depth);
                 solution = temp.getLeft() < solution.getLeft() ? temp : solution;
                 solution_lowest = solution_lowest == null || solution_lowest.getLeft() > solution.getLeft() ? solution : solution_lowest;
+                System.out.println(String.format("Best: \n%s", solution_lowest.getLeft()));
+                layoutsToString(solution_lowest.getRight());
             }
         }
         return solution;
@@ -309,7 +315,7 @@ class Generator {
         }
     }
 
-    void layoutsToString(Character[][] layout) {
+    static void layoutsToString(Character[][] layout) {
         System.out.println(String.format("Layout #%s:\n", 666));
         for (int l = 0; l < layout.length; l++) {
             String button = String.format("Button %s:\t", l);

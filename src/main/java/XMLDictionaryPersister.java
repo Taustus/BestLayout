@@ -17,7 +17,7 @@ public class XMLDictionaryPersister implements DictionaryPersister {
     private List<Word> wordsList;
 
     @ElementMap(name = "default_view", key = "wordform", value = "frequency", required = false)
-    private HashMap<String, Integer> words;
+    public HashMap<String, Integer> words;
 
     /**
      * Создает пустой загрузчик словаря.
@@ -71,8 +71,6 @@ public class XMLDictionaryPersister implements DictionaryPersister {
             write(os, Charset.forName("UTF-8"));
         }
     }
-
-
 
     /**
      * @throws NullPointerException     если <code>wordform</code> равен <tt>null</tt>.

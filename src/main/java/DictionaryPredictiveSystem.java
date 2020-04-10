@@ -50,7 +50,7 @@ public class DictionaryPredictiveSystem extends Dictionary
 				// Если такая буква есть в текущей ветви...
 				if (childNode != null) {
 					//Если глубина больше количества клавиш и частота ребенка больше максимальной найденной
-					if (depth >= pattern.size()) {
+					if (depth >= pattern.size() - 1) {
 						wordforms.computeIfAbsent(childNode.frequency, k -> new ArrayList<>());
 						wordforms.get(childNode.frequency).add(prefix + childNode.character);
 						maxFrequency = (int) childNode.frequency;
@@ -99,7 +99,7 @@ public class DictionaryPredictiveSystem extends Dictionary
 	 * шаблон поиска пуст, то метод вернет пустой immutable список.
 	 */
 	@Override
-	public List<String> getWordsByPattern(String regex) {
+	public List<String> getWordsByPattern(String regex, int n) {
 		final String emptyPrefix = "";
 		List<String> pattern = convertRegexPattern(regex);
 
@@ -110,21 +110,21 @@ public class DictionaryPredictiveSystem extends Dictionary
 				new TreeMap<Long, List<String>>(),
 				emptyPrefix,
 				pattern, 0);
-		List<String> firstThree = new ArrayList<>();
+		List<String> firstN = new ArrayList<>();
 
 		ArrayList<Long> keys = new ArrayList<Long>(wordformSet.keySet());
 
-		for (int i = keys.size() - 1; i > -1 && firstThree.size() < 3; i--) {
+		for (int i = keys.size() - 1; i > -1 && firstN.size() < n; i--) {
 			try {
-				for (int l = 0; l < wordformSet.get(keys.get(i)).size() && firstThree.size() < 3; l++) {
-					firstThree.add(wordformSet.get(keys.get(i)).get(l));
+				for (int l = 0; l < wordformSet.get(keys.get(i)).size() && firstN.size() < n; l++) {
+					firstN.add(wordformSet.get(keys.get(i)).get(l));
 				}
 			}
 			catch (Exception e){
 				System.out.println(e.getMessage());
 			}
 		}
-		return firstThree;
+		return firstN;
 	}
 
 	/**
